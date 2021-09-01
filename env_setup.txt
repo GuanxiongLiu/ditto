@@ -1,0 +1,10 @@
+==== pre-requirement ====
+docker
+
+
+==== create env ====
+docker pull nvcr.io/nvidia/tensorflow:18.10-py3
+
+
+==== manually install TF-1.10 ====
+pip3 install https://storage.googleapis.com/tensorflow/linux/gpu/tensorflow_gpu-1.10.0-cp36-cp36m-linux_x86_64.whl
