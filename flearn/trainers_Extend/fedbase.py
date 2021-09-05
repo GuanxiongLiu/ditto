@@ -241,20 +241,7 @@ class Server(object):
 
         for i in range(self.num_rounds + 1):
             if i % self.eval_every == 0 and i > 0:
-                tmp_models = []
-                for idx in range(len(self.clients)):
-                    tmp_models.append(self.local_models[idx])
-
-                num_train, num_correct_train, loss_vector = self.train_error(tmp_models)
-                avg_train_loss = np.dot(loss_vector, num_train) / np.sum(num_train)
-                num_test, num_correct_test, _ = self.test(tmp_models)
-                tqdm.write('At round {} training accu: {}, loss: {}'.format(i, np.sum(num_correct_train) * 1.0 / np.sum(num_train), avg_train_loss))
-                tqdm.write('At round {} test accu: {}'.format(i, np.sum(num_correct_test) * 1.0 / np.sum(num_test)))
-                non_corrupt_id = np.setdiff1d(range(len(self.clients)), corrupt_id)
-                tqdm.write('At round {} malicious test accu: {}'.format(i, np.sum(num_correct_test[corrupt_id]) * 1.0 / np.sum(num_test[corrupt_id])))
-                tqdm.write('At round {} benign test accu: {}'.format(i, np.sum(num_correct_test[non_corrupt_id]) * 1.0 / np.sum(num_test[non_corrupt_id])))
-                print("variance of the performance: ", np.var(num_correct_test[non_corrupt_id] / num_test[non_corrupt_id]))
-
+                self.local_optimizer.eval(self, i, corrupt_id, batches)
 
             # weighted sampling
             indices, selected_clients = self.select_clients(round=i, num_clients=self.clients_per_round)
@@ -263,18 +250,18 @@ class Server(object):
             losses = []
 
             for idx in indices:
+                weights_before = copy.deepcopy(self.global_model)
                 w_global_idx = copy.deepcopy(self.global_model)
                 c = self.clients[idx]
                 for _ in range(self.local_iters):
-                    data_batch = next(batches[c])
                     loss, w_global_idx = self.local_optimizer.run(
                         c, self.client_model, self.local_models[idx], 
-                        self.global_model, data_batch, w_global_idx
+                        self.global_model, batches, w_global_idx
                     )
                     losses.append(loss)
 
                 # get the difference (global model updates)
-                diff = [u - v for (u, v) in zip(w_global_idx, self.global_model)]
+                diff = [u - v for (u, v) in zip(w_global_idx, weights_before)]
 
 
                 # send the malicious updates
@@ -297,25 +284,6 @@ class Server(object):
                 'gradient_clipping': self.gradient_clipping
             }
             avg_updates = self.global_aggregator.run(csolns, agg_params)
-            # if self.q != 0:
-            #     avg_updates = self.aggregate(csolns)
-            # else:
-            #     if self.gradient_clipping:
-            #         csolns = l2_clip(csolns)
-
-            #     expected_num_mali = int(self.clients_per_round * self.num_corrupted / len(self.clients))
-
-            #     if self.median:
-            #         avg_updates = self.median_average(csolns)
-            #     elif self.k_norm:
-            #         avg_updates = self.k_norm_average(self.clients_per_round - expected_num_mali, csolns)
-            #     elif self.krum:
-            #         avg_updates = self.krum_average(self.clients_per_round - expected_num_mali - 2, csolns)
-            #     elif self.mkrum:
-            #         m = self.clients_per_round - expected_num_mali
-            #         avg_updates = self.mkrum_average(self.clients_per_round - expected_num_mali - 2, m, csolns)
-            #     else:
-            #         avg_updates = self.simple_average(csolns)
 
             # update the global model
             for layer in range(len(avg_updates)):
