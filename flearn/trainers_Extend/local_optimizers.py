@@ -14,6 +14,42 @@ class BaseLocalOptimizer(object):
         RuntimeWarning('run function is not implemented')
 
 
+class LocalOpt(BaseLocalOptimizer):
+    def __init__(self, params):
+        print('Using local SGD only')
+        super(LocalOpt, self).__init__(params)
+    
+    def run(self, c, client_model, local_model, global_model, batches, w_global_idx):
+        data_batch = next(batches[c])
+
+        # construct weights
+        client_model.set_params(w_global_idx)
+
+        _, grads, _ = c.solve_sgd(data_batch)
+        for layer in range(len(grads[1])):
+            local_model[layer] = local_model[layer] - self.learning_rate * grads[1][layer]
+
+        loss = c.get_loss() 
+        w_global_idx = client_model.get_params()
+
+        return loss, w_global_idx
+
+    def eval(self, fl_env, rd, corrupt_id, batches):
+        tmp_models = []
+        for idx in range(len(fl_env.clients)):
+            tmp_models.append(fl_env.global_model)
+
+        num_train, num_correct_train, loss_vector = fl_env.train_error(tmp_models)
+        avg_train_loss = np.dot(loss_vector, num_train) / np.sum(num_train)
+        num_test, num_correct_test, _ = fl_env.test(tmp_models)
+        tqdm.write('At round {} training accu: {}, loss: {}'.format(rd, np.sum(num_correct_train) * 1.0 / np.sum(num_train), avg_train_loss))
+        tqdm.write('At round {} test accu: {}'.format(rd, np.sum(num_correct_test) * 1.0 / np.sum(num_test)))
+        non_corrupt_id = np.setdiff1d(range(len(fl_env.clients)), corrupt_id)
+        tqdm.write('At round {} malicious test accu: {}'.format(rd, np.sum(num_correct_test[corrupt_id]) * 1.0 / np.sum(num_test[corrupt_id])))
+        tqdm.write('At round {} benign test accu: {}'.format(rd, np.sum(num_correct_test[non_corrupt_id]) * 1.0 / np.sum(num_test[non_corrupt_id])))
+        print("variance of the performance: ", np.var(num_correct_test[non_corrupt_id] / num_test[non_corrupt_id]))
+
+
 class DittoOpt(BaseLocalOptimizer):
     def __init__(self, params):
         print('Using local training method introduced in Ditto')
