@@ -3,11 +3,11 @@ import argparse
 import importlib
 import random
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 import tensorflow as tf
 from flearn.utils.model_utils import read_data
-from flearn.trainers_Extend.local_optimizers import DittoOpt
-from flearn.trainers_Extend.global_aggregators import SimpleFedAvg
+from flearn.trainers_Extend.local_optimizers import LocalOpt, DittoOpt, MetaOpt, PrivateLayerOpt
+from flearn.trainers_Extend.global_aggregators import SimpleFedAvg, KrumAgg, MultiKrumAgg, ElementWiseMedian, ElementWiseTrimmedMean
 
 # GLOBAL PARAMETERS
 OPTIMIZERS = ['fedsgd', 'fedavg', 'finetuning',
@@ -225,9 +225,11 @@ def main():
     )
 
     # setup global aggregator
-    global_agg_params = {}
+    global_agg_params = {
+        'trim_ratio': 0.1
+    }
     t.set_global_aggregator(
-        SimpleFedAvg(global_agg_params)
+        ElementWiseMedian(global_agg_params)
     )
 
     # start training

@@ -1,4 +1,4 @@
-python3  -u main_extend.py --dataset=fmnist \
+python3  -u main_extend.py --dataset=femnist \
             --optimizer=$1 \
             --learning_rate=0.05 \
             --num_rounds=5000 \
@@ -9,7 +9,7 @@ python3  -u main_extend.py --dataset=fmnist \
 	      --seed=0 \
             --model='cnn' \
 	      --sampling=2  \
-            --num_corrupted=0 \
+            --num_corrupted=41 \
             --boosting=0 \
             --random_updates=0 \
             --gradient_clipping=0 \
