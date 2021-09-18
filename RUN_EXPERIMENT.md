@@ -20,6 +20,9 @@ Edit file: main_extend.py
     * Elementwise Median = ```ElementWiseMedian```
     * Elementwise Trimmed Mean = ```ElementWiseTrimmedMean```
     * Simple FedAvg (no defense) = ```SimpleFedAvg```
+* GPU coniguration
+    * Run ```nvidia-smi``` to select a GPU card that has enough memory.
+    * Modify ```os.environ["CUDA_VISIBLE_DEVICES"] = "<index of selected GPU card>"```
 
 
 Setup local optimizer and global aggregator:
